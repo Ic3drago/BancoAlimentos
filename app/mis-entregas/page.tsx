@@ -2,6 +2,7 @@ import pool from '@/utils/db';
 import { MapPin, PackageCheck, Truck } from 'lucide-react';
 import { cookies } from 'next/headers';
 import BotonEntrega from '@/components/BotonEntrega';
+import MapaRutaCliente from '@/components/MapaRutaCliente';
 
 export const revalidate = 0;
 
@@ -50,6 +51,15 @@ export default async function MisEntregasPage() {
                 <MapPin className="w-5 h-5 text-emerald-500" /> {despacho.nombre_institucion}
               </h3>
               <p className="text-slate-400 text-sm ml-7 mb-6">Población: {despacho.cantidad_personas} personas ({despacho.tipo_poblacion})</p>
+
+              <div className="mb-6 rounded-2xl overflow-hidden border border-slate-800">
+                <MapaRutaCliente 
+                  conductorNombre={despacho.nombre_conductor || 'Conductor'} 
+                  destino={despacho.nombre_institucion} 
+                  latDestino={despacho.lat_destino || -17.3895} 
+                  lngDestino={despacho.lng_destino || -66.1568}
+                />
+              </div>
 
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-6">
                 <p className="text-slate-300 font-medium flex items-center gap-2 mb-2">

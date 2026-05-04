@@ -1,79 +1,97 @@
--- Habilitar extensión para UUIDs
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- ============================================================
+-- ESQUEMA COMPLETO MEJORADO (CON LIMPIEZA)
+-- Banco de Alimentos Bolivia
+-- ============================================================
 
--- Limpieza
-DROP VIEW IF EXISTS vista_sugerencia_despacho;
+-- 1. Limpieza total para asegurar que los cambios de nombres de columnas se apliquen
 DROP VIEW IF EXISTS vista_impacto_social;
+DROP VIEW IF EXISTS vista_sugerencia_despacho;
 DROP TABLE IF EXISTS despachos CASCADE;
 DROP TABLE IF EXISTS rutas CASCADE;
 DROP TABLE IF EXISTS lotes CASCADE;
 DROP TABLE IF EXISTS productos CASCADE;
+DROP TABLE IF EXISTS instituciones CASCADE;
 DROP TABLE IF EXISTS beneficiarios CASCADE;
+DROP TABLE IF EXISTS vehiculos CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
 
--- 0. Tabla de Usuarios (Roles)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Usuarios
 CREATE TABLE usuarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre VARCHAR(255) NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    rol VARCHAR(50) NOT NULL DEFAULT 'empleado' -- 'admin', 'conductor'
+    rol VARCHAR(50) NOT NULL DEFAULT 'empleado'
 );
 
--- 1. Tabla de Beneficiarios (Impacto Social)
-CREATE TABLE beneficiarios (
+-- 3. Vehículos
+CREATE TABLE vehiculos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre_institucion VARCHAR(255) NOT NULL,
+    placa VARCHAR(20) UNIQUE NOT NULL,
+    modelo VARCHAR(100),
+    capacidad_kg DECIMAL(10, 2)
+);
+
+-- 4. Instituciones
+CREATE TABLE instituciones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(255) NOT NULL,
     tipo_poblacion VARCHAR(100) NOT NULL,
     cantidad_personas INTEGER NOT NULL CHECK (cantidad_personas >= 0),
-    direccion TEXT
+    direccion TEXT,
+    latitud DECIMAL(10, 7),
+    longitud DECIMAL(10, 7)
 );
 
--- 2. Tabla de Productos
+-- 5. Productos
 CREATE TABLE productos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre VARCHAR(255) NOT NULL,
     categoria VARCHAR(100) NOT NULL
 );
 
--- 3. Tabla de Lotes (PEPS)
+-- 6. Lotes (PEPS)
 CREATE TABLE lotes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     producto_id UUID REFERENCES productos(id) ON DELETE CASCADE,
-    cantidad_actual INTEGER NOT NULL CHECK (cantidad_actual >= 0),
+    cantidad_disponible INTEGER NOT NULL CHECK (cantidad_disponible >= 0),
     fecha_ingreso TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_vencimiento DATE NOT NULL,
+    donante TEXT,
     estado VARCHAR(50) DEFAULT 'disponible'
 );
 
--- 4. Tabla de Rutas
+-- 7. Rutas
 CREATE TABLE rutas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vehiculo_id VARCHAR(100) NOT NULL,
+    vehiculo_id UUID REFERENCES vehiculos(id) ON DELETE SET NULL,
     conductor_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
     estado VARCHAR(50) DEFAULT 'programada'
 );
 
--- 5. Tabla de Despachos (Trazabilidad y Auditoría)
+-- 8. Despachos
 CREATE TABLE despachos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     ruta_id UUID REFERENCES rutas(id) ON DELETE CASCADE,
-    beneficiario_id UUID REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    institucion_id UUID REFERENCES instituciones(id) ON DELETE CASCADE,
     lote_id UUID REFERENCES lotes(id) ON DELETE CASCADE,
     creado_por UUID REFERENCES usuarios(id) ON DELETE SET NULL,
     cantidad_despachada INTEGER NOT NULL CHECK (cantidad_despachada > 0),
-    estado_entrega VARCHAR(50) DEFAULT 'en_transito', -- 'en_transito', 'entregado', 'cancelado'
-    fecha_despacho TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    estado_entrega VARCHAR(50) DEFAULT 'en_transito',
+    fecha_despacho TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_entrega TIMESTAMP
 );
 
--- 6. Vista de Sugerencia de Despacho (Cálculo PEPS)
+-- 9. Vistas
 CREATE VIEW vista_sugerencia_despacho AS
 SELECT 
     l.id AS lote_id,
     p.id AS producto_id,
     p.nombre AS nombre_producto,
     p.categoria,
-    l.cantidad_actual,
+    l.cantidad_disponible,
     l.fecha_ingreso,
     l.fecha_vencimiento,
     EXTRACT(DAY FROM (CURRENT_TIMESTAMP - l.fecha_ingreso)) AS dias_en_almacen,
@@ -83,28 +101,34 @@ FROM
 JOIN 
     productos p ON l.producto_id = p.id
 WHERE 
-    l.cantidad_actual > 0;
+    l.cantidad_disponible > 0;
 
--- 7. Vista de Seguimiento (Auditoría completa: quién cargó y quién entrega)
 CREATE VIEW vista_impacto_social AS
-SELECT 
-    d.id AS despacho_id,
-    b.nombre_institucion,
-    b.tipo_poblacion,
-    b.cantidad_personas,
-    p.nombre AS producto_entregado,
-    d.cantidad_despachada,
-    d.fecha_despacho,
-    d.estado_entrega,
-    r.id AS ruta_id,
-    r.vehiculo_id,
-    conductor.nombre AS nombre_conductor,
-    admin_user.nombre AS cargado_por
-FROM 
-    despachos d
-JOIN beneficiarios b ON d.beneficiario_id = b.id
-JOIN lotes l ON d.lote_id = l.id
-JOIN productos p ON l.producto_id = p.id
-JOIN rutas r ON d.ruta_id = r.id
-LEFT JOIN usuarios conductor ON r.conductor_id = conductor.id
-LEFT JOIN usuarios admin_user ON d.creado_por = admin_user.id;
+SELECT
+  d.id                        AS despacho_id,
+  d.estado_entrega,
+  d.fecha_despacho,
+  d.fecha_entrega,
+  d.cantidad_despachada,
+  p.nombre                    AS producto_entregado,
+  i.nombre                    AS nombre_institucion,
+  i.tipo_poblacion,
+  i.cantidad_personas,
+  i.latitud                   AS lat_destino,
+  i.longitud                  AS lng_destino,
+  v.placa                     AS vehiculo_id,
+  u.nombre                    AS nombre_conductor,
+  u2.nombre                   AS cargado_por,
+  r.id                        AS ruta_id
+FROM despachos d
+JOIN lotes l         ON d.lote_id = l.id
+JOIN productos p     ON l.producto_id = p.id
+JOIN instituciones i ON d.institucion_id = i.id
+JOIN rutas r         ON d.ruta_id = r.id
+JOIN vehiculos v     ON r.vehiculo_id = v.id
+JOIN usuarios u      ON r.conductor_id = u.id
+LEFT JOIN usuarios u2 ON d.creado_por = u2.id;
+
+-- 10. Índices
+CREATE INDEX idx_despachos_estado ON despachos(estado_entrega);
+CREATE INDEX idx_lotes_fecha_peps ON lotes(producto_id, fecha_ingreso ASC) WHERE cantidad_disponible > 0;

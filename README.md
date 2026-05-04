@@ -18,7 +18,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local:
 Si aún no lo has hecho, clona este proyecto y navega hasta la carpeta raíz:
 
 ```bash
-cd FinalProye
+cd <Nombre de tu archivo>
 ```
 
 ### 2. Instalar dependencias

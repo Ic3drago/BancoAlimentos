@@ -28,5 +28,7 @@ DOCUMENTACION*
 temp/
 scratch/
 
+
 # TypeScript
-tsconfig.tsbuildinfo
+tsconfig.tsbuildinfosetup_db.js
+setup_db.js

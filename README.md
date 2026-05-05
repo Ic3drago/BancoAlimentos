@@ -72,7 +72,7 @@ Serás redirigido a la pantalla de inicio de sesión donde deberás ingresar tus
 - **Middleware de protección** que impide el acceso a rutas no autorizadas.
 
 ### Panel de Administrador
-- **Dashboard PEPS:** Visualización de inventario priorizado por antigüedad (Primero en Entrar, Primero en Salir).
+- **Panel de Control:** Visualización de inventario priorizado por antigüedad.
 - **Buscador de productos:** Búsqueda en tiempo real de productos en el almacén para despacho.
 - **Alertas de caducidad:** Notificaciones automáticas de productos próximos a vencer.
 - **Registro de entradas:** Formulario para ingresar nuevas donaciones al almacén.

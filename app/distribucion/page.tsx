@@ -151,7 +151,7 @@ export default function DistribucionPage() {
       <header className="border-b border-slate-800 px-6 md:px-10 py-5 flex items-center justify-between bg-[#0a1221]">
         <div>
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-0.5">Banco de Alimentos · Bolivia</p>
-          <h1 className="text-2xl font-black tracking-tight text-white">Distribución y Logística</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">Control de Salidas</h1>
         </div>
         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-full">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -172,7 +172,7 @@ export default function DistribucionPage() {
         <div className="xl:col-span-2 space-y-6">
           <div>
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Package className="w-3 h-3" /> Lotes disponibles <span className="text-slate-700">· PEPS</span>
+              <Package className="w-3 h-3" /> Lotes disponibles
             </h2>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {LOTES_DB.map((lote, idx) => {

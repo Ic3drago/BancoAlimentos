@@ -18,7 +18,7 @@ export default function Sidebar({ userRol, userName }: SidebarProps) {
 
   const menu = userRol === 'admin' 
     ? [
-        { name: 'Dashboard / PEPS', icon: PackageOpen, path: '/distribucion' },
+        { name: 'Panel de Control', icon: PackageOpen, path: '/distribucion' },
         { name: 'Registrar Entradas', icon: PackagePlus, path: '/entradas' },
         { name: 'Seguimiento', icon: Truck, path: '/seguimiento' },
       ]

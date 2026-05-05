@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Logística | Banco de Alimentos Bolivia',
-  description: 'Módulo de distribución, PEPS e impacto social',
+  description: 'Gestión de inventario y seguimiento de entregas',
 }
 
 export default function RootLayout({

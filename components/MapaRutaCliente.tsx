@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Loader2, Map as MapIcon, RefreshCcw } from 'lucide-react';
 
 type Props = {
   conductorNombre: string;
@@ -9,151 +10,118 @@ type Props = {
   lngDestino: number;
 };
 
-function simularPosicionConductor(latDest: number, lngDest: number) {
-  const offset = 0.015;
-  return {
-    lat: latDest + offset,
-    lng: lngDest - offset,
-  };
-}
-
 export default function MapaRutaCliente({ conductorNombre, destino, latDestino, lngDestino }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-
-  const latNum = Number(latDestino);
-  const lngNum = Number(lngDestino);
-  const posActual = simularPosicionConductor(latNum, lngNum);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'timeout'>('loading');
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current) return;
+    // Timeout de 7 segundos para el cargando
+    const timeout = setTimeout(() => {
+      if (status === 'loading') setStatus('timeout');
+    }, 7000);
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    
-    const initGoogleMap = () => {
+    const initMap = () => {
       const google = (window as any).google;
-      if (!google || mapInstanceRef.current) return;
+      if (!google || !google.maps || !mapRef.current) return;
 
-      const map = new google.maps.Map(mapRef.current, {
-        center: { lat: (posActual.lat + latNum) / 2, lng: (posActual.lng + lngNum) / 2 },
-        zoom: 14,
-        disableDefaultUI: true,
-        styles: [
-          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-          {
-            featureType: "administrative.locality",
-            elementType: "labels.text.fill",
-            stylers: [{ color: "#d59563" }],
-          },
-          {
-            featureType: "poi",
-            elementType: "labels.text.fill",
-            stylers: [{ color: "#d59563" }],
-          },
-          {
-            featureType: "road",
-            elementType: "geometry",
-            stylers: [{ color: "#38414e" }],
-          },
-          {
-            featureType: "road",
-            elementType: "geometry.stroke",
-            stylers: [{ color: "#212a37" }],
-          },
-          {
-            featureType: "road",
-            elementType: "labels.text.fill",
-            stylers: [{ color: "#9ca5b3" }],
-          },
-          {
-            featureType: "water",
-            elementType: "geometry",
-            stylers: [{ color: "#17263c" }],
-          },
-        ],
-      });
+      const latNum = parseFloat(latDestino as any);
+      const lngNum = parseFloat(lngDestino as any);
 
-      // Marcador Conductor
-      new google.maps.Marker({
-        position: { lat: posActual.lat, lng: posActual.lng },
-        map,
-        title: conductorNombre,
-        icon: {
-          path: "M1 3h15v13H1zM16 8h4l3 3v5h-7V8z",
-          fillColor: "#f97316",
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#ffffff",
-          scale: 1.5,
+      if (isNaN(latNum) || isNaN(lngNum)) {
+        setStatus('error');
+        return;
+      }
+
+      try {
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+            center: { lat: latNum, lng: lngNum },
+            zoom: 15,
+            disableDefaultUI: true,
+            gestureHandling: 'none',
+            styles: [
+              { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
+              { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] }
+            ]
+          });
         }
-      });
 
-      // Marcador Destino
-      new google.maps.Marker({
-        position: { lat: latNum, lng: lngNum },
-        map,
-        title: destino,
-        icon: {
-          path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-          fillColor: "#06b6d4",
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#ffffff",
-          scale: 6,
-        }
-      });
+        const destination = new google.maps.LatLng(latNum, lngNum);
+        new google.maps.Marker({ 
+          position: destination, 
+          map: mapInstanceRef.current, 
+          icon: { path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW, scale: 4, fillColor: "#10b981", fillOpacity: 1, strokeWeight: 1, strokeColor: "#ffffff" }
+        });
 
-      // Línea de ruta
-      new google.maps.Polyline({
-        path: [
-          { lat: posActual.lat, lng: posActual.lng },
-          { lat: latNum, lng: lngNum },
-        ],
-        geodesic: true,
-        strokeColor: "#f97316",
-        strokeOpacity: 0.8,
-        strokeWeight: 3,
-        icons: [{
-          icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 2 },
-          offset: "0",
-          repeat: "10px",
-        }],
-      }).setMap(map);
+        setStatus('ready');
+        clearTimeout(timeout);
 
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend({ lat: posActual.lat, lng: posActual.lng });
-      bounds.extend({ lat: latNum, lng: lngNum });
-      map.fitBounds(bounds);
+        navigator.geolocation.getCurrentPosition((position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+          const origin = new google.maps.LatLng(userLat, userLng);
 
-      mapInstanceRef.current = map;
+          const ds = new google.maps.DirectionsService();
+          const dr = new google.maps.DirectionsRenderer({ map: mapInstanceRef.current, suppressMarkers: true, polylineOptions: { strokeColor: "#10b981", strokeWeight: 4 } });
+
+          ds.route({ origin, destination, travelMode: google.maps.TravelMode.DRIVING }, (res: any, status: any) => {
+            if (status === "OK") {
+              dr.setDirections(res);
+              const bounds = new google.maps.LatLngBounds();
+              bounds.extend(origin);
+              bounds.extend(destination);
+              mapInstanceRef.current.fitBounds(bounds);
+            }
+          });
+        }, (err) => console.warn("GPS OFF"));
+      } catch (e) {
+        console.error("Map Error", e);
+        setStatus('error');
+      }
     };
 
-    if ((window as any).google && (window as any).google.maps) {
-      initGoogleMap();
-    } else {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
-      script.async = true;
-      script.defer = true;
-      (window as any).initMap = initGoogleMap;
-      document.head.appendChild(script);
-    }
-  }, [conductorNombre, destino, latDestino, lngDestino]);
+    const checkGoogle = setInterval(() => {
+      if ((window as any).google && (window as any).google.maps) {
+        initMap();
+        clearInterval(checkGoogle);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(checkGoogle);
+      clearTimeout(timeout);
+    };
+  }, [latDestino, lngDestino]);
+
+  const handleRetry = () => {
+    window.location.reload();
+  };
 
   return (
-    <div className="relative">
-      <div
-        ref={mapRef}
-        className="w-full h-48 bg-slate-950 rounded-2xl overflow-hidden"
-        style={{ zIndex: 0 }}
-      />
-      <div className="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-xl px-3 py-2 flex items-center gap-2 z-10 shadow-lg">
-        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
-        <span className="text-white text-[10px] font-bold uppercase tracking-tight">{conductorNombre}</span>
-        <span className="text-slate-500 text-[10px]">→ {destino}</span>
-      </div>
+    <div className="w-full h-full relative bg-[#0f172a] flex items-center justify-center">
+      {status === 'loading' && (
+        <div className="flex flex-col items-center gap-2 animate-pulse">
+          <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+          <span className="text-[7px] text-slate-500 font-black uppercase tracking-widest">Sincronizando...</span>
+        </div>
+      )}
+      
+      {status === 'timeout' && (
+        <button onClick={handleRetry} className="flex flex-col items-center gap-2 text-slate-500 hover:text-emerald-400 transition-colors">
+          <RefreshCcw className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase">Reintentar Mapa</span>
+        </button>
+      )}
+
+      {status === 'error' && (
+        <div className="flex flex-col items-center gap-2 text-red-500/50">
+          <MapIcon className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase tracking-widest">Error GPS</span>
+        </div>
+      )}
+
+      <div ref={mapRef} className={`absolute inset-0 w-full h-full ${status === 'ready' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} />
     </div>
   );
 }

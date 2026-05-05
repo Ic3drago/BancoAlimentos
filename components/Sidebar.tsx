@@ -27,7 +27,7 @@ export default function Sidebar({ userRol, userName }: SidebarProps) {
       ];
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen sticky top-0">
+    <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col h-screen sticky top-0 shrink-0">
       <div className="p-6 border-b border-slate-800">
         <h2 className="text-xl font-black text-emerald-400 tracking-tight">Banco de Alimentos</h2>
         <p className="text-xs text-slate-400 mt-1 font-medium tracking-widest uppercase">Bolivia</p>

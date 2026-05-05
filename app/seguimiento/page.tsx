@@ -1,123 +1,70 @@
-import pool from '@/utils/db';
-import { Truck, MapPin, PackageCheck, Users } from 'lucide-react';
-import { VistaImpactoSocial } from '@/types/database';
-import AutoRefresh from '@/components/AutoRefresh';
+import { getEntregasActivas } from '@/app/actions/get-seguimiento';
+import MapaSeguimientoAdmin from '@/components/MapaSeguimientoAdmin';
+import { Truck, Map as MapIcon, Activity } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 0; // Datos siempre frescos
 
 export default async function SeguimientoPage() {
-  let despachosEnRuta: any[] = [];
-  let poblacionAlcanzada = 0;
-  
-  try {
-    const res = await pool.query(`
-      SELECT * FROM vista_impacto_social 
-      WHERE estado_entrega = 'en_transito'
-      ORDER BY fecha_despacho ASC
-    `);
-    despachosEnRuta = res.rows;
-
-    const resStats = await pool.query(`
-      SELECT SUM(cantidad_personas) as total 
-      FROM vista_impacto_social 
-      WHERE estado_entrega = 'entregado'
-    `);
-    poblacionAlcanzada = resStats.rows[0]?.total || 0;
-  } catch (err) {
-    console.error(err);
-  }
+  const entregas = await getEntregasActivas();
 
   return (
-    <div className="p-8">
-      <AutoRefresh intervalMs={3000} />
-      
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-950 p-6 md:p-10">
+      <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Truck className="w-8 h-8 text-emerald-400" /> Seguimiento Logístico
+          <h1 className="text-4xl font-black text-white flex items-center gap-4">
+            <Activity className="w-10 h-10 text-orange-500" />
+            Centro de Control Logístico
           </h1>
-          <p className="text-slate-400 mt-2">Trazabilidad en tiempo real de vehículos en ruta hacia los beneficiarios.</p>
+          <p className="text-slate-400 mt-2 text-lg">Seguimiento satelital en tiempo real de la flota de distribución.</p>
         </div>
-        
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center gap-4 shadow-xl">
-          <div className="bg-emerald-500/10 p-3 rounded-full border border-emerald-500/20">
-            <Users className="w-6 h-6 text-emerald-400" />
+
+        <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-4 rounded-2xl">
+          <div className="text-right">
+            <p className="text-xs text-slate-500 font-bold uppercase">Vehículos en Ruta</p>
+            <p className="text-2xl font-black text-orange-500">{entregas.length}</p>
           </div>
-          <div>
-            <p className="text-sm text-slate-400 font-semibold uppercase tracking-wider">Población Alimentada</p>
-            <p className="text-3xl font-black text-white">{poblacionAlcanzada}</p>
+          <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
+            <Truck className="w-6 h-6 text-orange-500" />
           </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {despachosEnRuta.map((despacho, index) => (
-          <div key={despacho.despacho_id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between h-full">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse flex items-center gap-2">
-                  <Truck className="w-3 h-3" /> En Tránsito
-                </span>
-                <span className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded-md text-sm border border-slate-700">
-                  Envío Nº {index + 1}
-                </span>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Panel lateral: Lista de conductores */}
+        <div className="lg:col-span-1 space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <MapIcon className="w-4 h-4" /> Conductores Activos
+          </h2>
+          
+          {entregas.length === 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center">
+              <p className="text-slate-500 text-sm italic">No hay entregas activas en este momento.</p>
+            </div>
+          )}
+
+          {entregas.map((entrega) => (
+            <div 
+              key={entrega.despacho_id} 
+              className="bg-slate-900 border border-slate-800 p-5 rounded-2xl hover:border-orange-500/50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">ONLINE</span>
+                <span className="text-xs text-slate-500 font-mono">{entrega.placa}</span>
               </div>
-              
-              <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-emerald-500" /> {despacho.nombre_institucion}
-              </h3>
-              <p className="text-slate-400 text-sm ml-7 mb-6">Población: {despacho.cantidad_personas} personas ({despacho.tipo_poblacion})</p>
-
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-6 space-y-4">
-                <div>
-                  <p className="text-slate-300 font-medium flex items-center gap-2 mb-2">
-                    <Truck className="w-4 h-4 text-slate-400" /> Vehículo y Conductor
-                  </p>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">{despacho.vehiculo_id}</span>
-                    <span className="text-white font-bold">{despacho.nombre_conductor || 'No asignado'}</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-800">
-                  <p className="text-slate-300 font-medium flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4 text-slate-400" /> Auditoría
-                  </p>
-                  <div className="flex justify-between items-center text-sm mb-1">
-                    <span className="text-slate-500">Despacho cargado por:</span>
-                    <span className="text-emerald-400 font-semibold">{despacho.cargado_por || 'Sin registro'}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Entregado por:</span>
-                    <span className="text-orange-400 font-semibold">{despacho.nombre_conductor || 'No asignado'}</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-800">
-                  <p className="text-slate-300 font-medium flex items-center gap-2 mb-2">
-                    <PackageCheck className="w-4 h-4 text-slate-400" /> Carga Actual
-                  </p>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400">{despacho.producto_entregado}</span>
-                    <span className="text-white font-bold">{despacho.cantidad_despachada} unid.</span>
-                  </div>
-                </div>
+              <p className="font-bold text-white group-hover:text-orange-400 transition-colors">{entrega.nombre_conductor}</p>
+              <p className="text-xs text-slate-500 mt-1">Hacia: <span className="text-slate-300">{entrega.nombre_institucion}</span></p>
+              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-[10px] text-slate-500">CARGA</span>
+                <span className="text-[10px] text-white font-bold">{entrega.cantidad_despachada} unid.</span>
               </div>
             </div>
+          ))}
+        </div>
 
-            <div className="w-full bg-slate-950 text-slate-500 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 border border-slate-800 border-dashed text-sm">
-              Esperando confirmación del conductor...
-            </div>
-          </div>
-        ))}
-
-        {despachosEnRuta.length === 0 && (
-          <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-            <Truck className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-slate-300">Todos los vehículos en base</h3>
-            <p className="text-slate-500 mt-2">No hay despachos en tránsito actualmente.</p>
-          </div>
-        )}
+        {/* Mapa central */}
+        <div className="lg:col-span-3">
+          <MapaSeguimientoAdmin entregas={entregas} />
+        </div>
       </div>
     </div>
   );

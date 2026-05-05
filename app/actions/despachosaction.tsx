@@ -9,20 +9,42 @@ type AsignacionItem = {
 };
 
 type DespachoPayload = {
-  rutaId: string;
+  rutaId?: string;
+  conductorId?: string;
+  vehiculoId?: string;
   asignaciones: AsignacionItem[];
 };
 
 export async function crearDespacho(payload: DespachoPayload) {
-  const { rutaId, asignaciones } = payload;
+  const { rutaId: providedRutaId, conductorId, vehiculoId, asignaciones } = payload;
 
-  if (!rutaId || !asignaciones || asignaciones.length === 0) {
+  if ((!providedRutaId && (!conductorId || !vehiculoId)) || !asignaciones || asignaciones.length === 0) {
     return { error: 'Datos incompletos para crear el despacho' };
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    let finalRutaId = providedRutaId;
+
+    // Si no se proveyó ruta, buscar una existente o crearla
+    if (!finalRutaId) {
+      const rutaExistente = await client.query(
+        "SELECT id FROM rutas WHERE conductor_id = $1 AND vehiculo_id = $2 AND estado != 'completada' LIMIT 1",
+        [conductorId, vehiculoId]
+      );
+
+      if (rutaExistente.rows.length > 0) {
+        finalRutaId = rutaExistente.rows[0].id;
+      } else {
+        const nuevaRuta = await client.query(
+          "INSERT INTO rutas (conductor_id, vehiculo_id, estado) VALUES ($1, $2, 'en_curso') RETURNING id",
+          [conductorId, vehiculoId]
+        );
+        finalRutaId = nuevaRuta.rows[0].id;
+      }
+    }
 
     for (const asig of asignaciones) {
       const { loteId, instId, cantidadEnviar } = asig;
@@ -34,7 +56,7 @@ export async function crearDespacho(payload: DespachoPayload) {
       );
       if (loteRes.rows.length === 0) throw new Error(`Lote ${loteId} no encontrado`);
       
-      const disponible = loteRes.rows[0].cantidad_disponible;
+      const disponible = parseFloat(loteRes.rows[0].cantidad_disponible);
       if (cantidadEnviar > disponible) {
         throw new Error(`Stock insuficiente en lote ${loteId}: disponible ${disponible}, solicitado ${cantidadEnviar}`);
       }
@@ -43,7 +65,7 @@ export async function crearDespacho(payload: DespachoPayload) {
       await client.query(
         `INSERT INTO despachos (lote_id, institucion_id, ruta_id, cantidad_despachada, estado_entrega, fecha_despacho)
          VALUES ($1, $2, $3, $4, 'en_transito', NOW())`,
-        [loteId, instId, rutaId, cantidadEnviar]
+        [loteId, instId, finalRutaId, cantidadEnviar]
       );
 
       // Descontar del lote (PEPS: se descuenta del lote más antiguo seleccionado)

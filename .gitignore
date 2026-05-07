@@ -31,4 +31,5 @@ scratch/
 
 # TypeScript
 tsconfig.tsbuildinfosetup_db.js
+.npm-cache/
 setup_db.js

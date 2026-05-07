@@ -41,9 +41,27 @@ export default function MapaSeguimientoAdmin({ entregas }: { entregas: Entrega[]
       markersRef.current = [];
       renderersRef.current.forEach(r => r.setMap(null));
       renderersRef.current = [];
-
       const bounds = new google.maps.LatLngBounds();
       let hasPoints = false;
+
+      // Marcador de Origen: Banco de Alimentos
+      const posOrigen = new google.maps.LatLng(-17.3895, -66.1568);
+      const mOrigen = new google.maps.Marker({
+        position: posOrigen,
+        map: mapInstanceRef.current,
+        title: "BANCO DE ALIMENTOS (ORIGEN)",
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#ef4444",
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#ffffff"
+        },
+        label: { text: "H", color: "white", fontWeight: "bold" }
+      });
+      markersRef.current.push(mOrigen);
+      bounds.extend(posOrigen);
 
       entregas.forEach(entrega => {
         const latDest = parseFloat(entrega.lat_destino as any);
@@ -57,13 +75,41 @@ export default function MapaSeguimientoAdmin({ entregas }: { entregas: Entrega[]
         const posDest = new google.maps.LatLng(latDest, lngDest);
 
         // Marcadores
-        const m1 = new google.maps.Marker({ position: posAct, map: mapInstanceRef.current, title: `Conductor: ${entrega.nombre_conductor}` });
-        const m2 = new google.maps.Marker({ position: posDest, map: mapInstanceRef.current, label: "D" });
+        const m1 = new google.maps.Marker({ 
+          position: posAct, 
+          map: mapInstanceRef.current, 
+          title: `Conductor: ${entrega.nombre_conductor}`,
+          icon: {
+            path: "M20,8L20,8c0-1.1-0.9-2-2-2h-2V4c0-1.1-0.9-2-2-2h-4C8.9,2,8,2.9,8,4v2H6C4.9,6,4,6.9,4,8l0,0c0,1.1,0.9,2,2,2h12 C19.1,10,20,9.1,20,8z M16,6h-6V4h6V6z",
+            fillColor: "#f97316",
+            fillOpacity: 1,
+            strokeWeight: 1,
+            strokeColor: "#ffffff",
+            scale: 1.5,
+            anchor: new google.maps.Point(12, 12)
+          }
+        });
+        const m2 = new google.maps.Marker({ 
+          position: posDest, 
+          map: mapInstanceRef.current, 
+          icon: {
+            path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+            scale: 5,
+            fillColor: "#10b981",
+            fillOpacity: 1,
+            strokeWeight: 1,
+            strokeColor: "#ffffff"
+          }
+        });
         markersRef.current.push(m1, m2);
 
         // Ruta
         const ds = new google.maps.DirectionsService();
-        const dr = new google.maps.DirectionsRenderer({ map: mapInstanceRef.current, suppressMarkers: true });
+        const dr = new google.maps.DirectionsRenderer({ 
+          map: mapInstanceRef.current, 
+          suppressMarkers: true,
+          polylineOptions: { strokeColor: "#3b82f6", strokeWeight: 4, strokeOpacity: 0.6 }
+        });
         renderersRef.current.push(dr);
 
         ds.route({ origin: posAct, destination: posDest, travelMode: google.maps.TravelMode.DRIVING }, (res: any, status: any) => {
@@ -75,7 +121,7 @@ export default function MapaSeguimientoAdmin({ entregas }: { entregas: Entrega[]
         hasPoints = true;
       });
 
-      if (hasPoints && entregas.length > 0) {
+      if (hasPoints || true) {
         mapInstanceRef.current.fitBounds(bounds);
       }
     };

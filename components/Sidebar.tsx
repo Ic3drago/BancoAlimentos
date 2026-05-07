@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PackageOpen, Truck, PackagePlus, LogOut, Map } from 'lucide-react';
+import { PackageOpen, Truck, PackagePlus, LogOut, Map, BarChart3 } from 'lucide-react';
 import { logout } from '@/app/actions/auth';
 
 interface SidebarProps {
@@ -21,6 +21,7 @@ export default function Sidebar({ userRol, userName }: SidebarProps) {
         { name: 'Panel de Control', icon: PackageOpen, path: '/distribucion' },
         { name: 'Registrar Entradas', icon: PackagePlus, path: '/entradas' },
         { name: 'Seguimiento', icon: Truck, path: '/seguimiento' },
+        { name: 'Reportes', icon: BarChart3, path: '/reportes' },
       ]
     : [
         { name: 'Mis Entregas', icon: Map, path: '/mis-entregas' },

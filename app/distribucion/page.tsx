@@ -1,30 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { MapPin, Package, Plus, Trash2, Send, ArrowRight, ChevronDown, CheckCircle2, Truck, User, Link as LinkIcon } from 'lucide-react';
+import { MapPin, Package, Plus, Trash2, Send, ArrowRight, ChevronDown, CheckCircle2, Truck, User, Link as LinkIcon, Clock, ShieldAlert, ArrowRightLeft } from 'lucide-react';
 
 // Tipos
-type Lote = {
-  id: string;
-  producto: string;
-  cantidad_disponible: number;
-  unidad: string;
-  fecha_ingreso: string;
-};
-
-type Institucion = {
-  id: string;
-  nombre: string;
-  tipo_poblacion: string;
-  cantidad_personas: number;
-};
-
-type Ruta = {
-  id: string;
-  conductor: string;
-  vehiculo: string;
-};
-
 type AsignacionItem = {
   tempId: string;
   loteId: string;
@@ -172,7 +151,7 @@ export default function DistribucionPage() {
         <div className="xl:col-span-2 space-y-6">
           <div>
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Package className="w-3 h-3" /> Lotes disponibles
+              <Package className="w-3 h-3" /> Lotes disponibles (PEPS)
             </h2>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {LOTES_DB.map((lote, idx) => {
@@ -192,11 +171,25 @@ export default function DistribucionPage() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           {idx === 0 && (
-                            <span className="text-[9px] bg-amber-500 text-black px-2 py-0.5 rounded-full font-black uppercase">Prioridad</span>
+                            <span className="text-[9px] bg-amber-500 text-black px-2 py-0.5 rounded-full font-black uppercase">Prioridad PEPS</span>
                           )}
                           <p className="font-bold text-white text-base">{lote.producto}</p>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{lote.categoria} · Ingreso: {new Date(lote.fecha_ingreso).toLocaleDateString()}</p>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{lote.categoria}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                             <div className="flex items-center gap-1">
+                               <Clock className="w-3 h-3 text-emerald-500" />
+                               <span className="text-[9px] text-slate-400 font-bold uppercase">Entrada: {new Date(lote.fecha_ingreso).toLocaleDateString()}</span>
+                             </div>
+                             {lote.fecha_vencimiento && (
+                               <div className="flex items-center gap-1">
+                                 <ShieldAlert className="w-3 h-3 text-amber-500" />
+                                 <span className="text-[9px] text-slate-400 font-bold uppercase">Vence: {new Date(lote.fecha_vencimiento).toLocaleDateString()}</span>
+                               </div>
+                             )}
+                          </div>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-black text-white">{disp}</p>

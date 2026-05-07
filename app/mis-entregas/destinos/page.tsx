@@ -3,6 +3,7 @@ import { MapPin, Truck, ArrowLeft, Navigation2, History } from 'lucide-react';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import MapaSeguimientoAdmin from '@/components/MapaSeguimientoAdmin';
+import DriverNav from '@/components/DriverNav';
 
 export const revalidate = 0;
 
@@ -13,21 +14,29 @@ export default async function DestinosPage() {
   
   if (userId) {
     try {
-      const res = await pool.query(`
-        SELECT 
-          v.despacho_id,
-          v.nombre_institucion,
-          v.lat_destino,
-          v.lng_destino,
-          v.nombre_conductor,
-          v.vehiculo_id as placa,
-          v.producto_entregado,
-          v.cantidad_despachada
-        FROM vista_impacto_social v
-        WHERE v.estado_entrega = 'en_transito'
-        AND v.ruta_id IN (SELECT id FROM rutas WHERE conductor_id = $1)
+      // Primero buscamos si hay una ruta activa
+      const rutaRes = await pool.query(`
+        SELECT id FROM rutas WHERE conductor_id = $1 AND estado != 'completada' LIMIT 1
       `, [userId]);
-      misDespachos = res.rows;
+
+      if (rutaRes.rows.length > 0) {
+        const activeRutaId = rutaRes.rows[0].id;
+        const res = await pool.query(`
+          SELECT 
+            v.despacho_id,
+            v.nombre_institucion,
+            v.lat_destino,
+            v.lng_destino,
+            v.nombre_conductor,
+            v.vehiculo_id as placa,
+            v.producto_entregado,
+            v.cantidad_despachada,
+            v.estado_entrega
+          FROM vista_impacto_social v
+          WHERE v.ruta_id = $1
+        `, [activeRutaId]);
+        misDespachos = res.rows;
+      }
     } catch (err) {
       console.error(err);
     }
@@ -43,8 +52,8 @@ export default async function DestinosPage() {
               <ArrowLeft className="w-5 h-5 text-slate-400" />
             </Link>
             <div>
-              <p className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">Mapa de Ruta</p>
-              <h1 className="text-2xl font-black text-white tracking-tight">Mis Destinos</h1>
+              <p className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">Visualización de Ruta</p>
+              <h1 className="text-2xl font-black text-white tracking-tight">Mapa</h1>
             </div>
           </div>
           <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
@@ -72,42 +81,34 @@ export default async function DestinosPage() {
                   <p className="text-[10px] text-slate-500 font-bold uppercase">{item.producto_entregado}</p>
                 </div>
               </div>
-              <a 
-                href={`https://www.google.com/maps/dir/?api=1&destination=${item.lat_destino},${item.lng_destino}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20"
-              >
-                <Navigation2 className="w-4 h-4 text-emerald-400" />
-              </a>
+              <div className="flex items-center gap-2">
+                {item.estado_entrega === 'entregado' && (
+                  <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-black uppercase">Entregado</span>
+                )}
+                <a 
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${item.lat_destino},${item.lng_destino}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20"
+                >
+                  <Navigation2 className="w-4 h-4 text-emerald-400" />
+                </a>
+              </div>
             </div>
           ))}
+
+          {misDespachos.length === 0 && (
+            <div className="bg-[#111827] border border-slate-800 rounded-3xl p-10 text-center">
+              <Truck className="w-12 h-12 text-slate-800 mx-auto mb-4" />
+              <p className="text-slate-400 text-sm font-bold uppercase">No hay ruta activa</p>
+              <p className="text-slate-600 text-[10px] mt-1">Cuando tengas una ruta asignada, aparecerá aquí.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Menú Inferior */}
-      <div className="fixed bottom-6 inset-x-6 z-50">
-        <div className="bg-[#111827]/90 backdrop-blur-2xl border border-white/10 p-4 rounded-3xl shadow-2xl flex justify-around items-center">
-          <Link href="/mis-entregas" className="flex flex-col items-center gap-1 text-slate-600">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <Truck className="w-5 h-5" />
-            </div>
-            <span className="text-[8px] font-black uppercase tracking-tighter">Entregas</span>
-          </Link>
-          <Link href="/mis-entregas/destinos" className="flex flex-col items-center gap-1 text-emerald-400">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <span className="text-[8px] font-black uppercase tracking-tighter">Destinos</span>
-          </Link>
-          <Link href="/mis-entregas/historial" className="flex flex-col items-center gap-1 text-slate-600">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <History className="w-5 h-5" />
-            </div>
-            <span className="text-[8px] font-black uppercase tracking-tighter">Historial</span>
-          </Link>
-        </div>
-      </div>
+      <DriverNav />
     </div>
   );
 }

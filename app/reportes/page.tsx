@@ -24,7 +24,7 @@ export default async function ReportesPage() {
     return <div className="p-10 text-white">Error cargando reportes.</div>;
   }
 
-  const { entregas, peps, resumenInstituciones } = reportData;
+  const { entregas = [], peps = [], resumenInstituciones = [] } = reportData;
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-200 p-6 md:p-10 font-sans">
@@ -39,7 +39,7 @@ export default async function ReportesPage() {
           <p className="text-slate-500 mt-2">Monitoreo de trazabilidad, sistema PEPS y distribución social.</p>
         </div>
         <div className="flex items-center gap-4">
-           {entregas.length > 0 && (
+           {entregas && entregas.length > 0 && (
              <ExportExcelButton data={entregas} filename={`reporte-general-${new Date().toISOString().split('T')[0]}.xlsx`} />
            )}
         </div>
@@ -54,21 +54,21 @@ export default async function ReportesPage() {
               <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Entregas</p>
-            <p className="text-3xl font-black text-white mt-1">{entregas.length}</p>
+            <p className="text-3xl font-black text-white mt-1">{entregas?.length || 0}</p>
           </div>
           <div className="bg-[#111827] border border-white/5 p-6 rounded-3xl shadow-xl">
             <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4">
               <Package className="w-5 h-5 text-blue-500" />
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Lotes en Stock</p>
-            <p className="text-3xl font-black text-white mt-1">{peps.length}</p>
+            <p className="text-3xl font-black text-white mt-1">{peps?.length || 0}</p>
           </div>
           <div className="bg-[#111827] border border-white/5 p-6 rounded-3xl shadow-xl">
             <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center mb-4">
               <MapPin className="w-5 h-5 text-violet-500" />
             </div>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Instituciones</p>
-            <p className="text-3xl font-black text-white mt-1">{resumenInstituciones.length}</p>
+            <p className="text-3xl font-black text-white mt-1">{resumenInstituciones?.length || 0}</p>
           </div>
           <div className="bg-[#111827] border border-white/5 p-6 rounded-3xl shadow-xl">
             <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center mb-4">
@@ -88,7 +88,7 @@ export default async function ReportesPage() {
               </h2>
             </div>
             <div className="h-[400px]">
-              <MapaSeguimientoAdmin entregas={entregas.map((e: any) => ({
+              <MapaSeguimientoAdmin entregas={entregas?.map((e: any) => ({
                 ...e,
                 placa: e.vehiculo_id,
                 lat_destino: e.lat_destino,
@@ -114,7 +114,7 @@ export default async function ReportesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {entregas.map((entrega: any) => (
+                  {entregas?.map((entrega: any) => (
                     <tr key={entrega.despacho_id} className="group hover:bg-white/[0.02] transition-all">
                       <td className="py-4">
                         <p className="text-sm font-bold text-white">{entrega.producto_entregado}</p>
@@ -153,7 +153,7 @@ export default async function ReportesPage() {
             </div>
             
             <div className="space-y-4">
-              {peps.map((item: any, idx: number) => (
+              {peps?.map((item: any, idx: number) => (
                 <div key={item.lote_id} className="bg-[#1e293b]/30 border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${idx < 3 ? 'bg-red-500' : 'bg-amber-500'}`}></div>
                   <div className="flex justify-between items-start mb-2">
@@ -190,7 +190,7 @@ export default async function ReportesPage() {
               <TrendingUp className="w-5 h-5 text-violet-500" /> Top Instituciones
             </h2>
             <div className="space-y-4">
-              {resumenInstituciones.map((inst: any) => (
+              {resumenInstituciones?.map((inst: any) => (
                 <div key={inst.nombre_institucion} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-xs font-black text-slate-500">
